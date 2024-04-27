@@ -41,11 +41,12 @@ namespace
 
 enum PYLON_CAM_TYPE
 {
-    GIGE = 1,
-    USB = 2,
-    DART = 3,
-    GIGE2 = 4,
-    BLAZE = 5,
+    EMU = 1,
+    GIGE = 2,
+    USB = 3,
+    DART = 4,
+    GIGE2 = 5,
+    BLAZE = 6,
     UNKNOWN = -1,
 };
 
@@ -69,7 +70,11 @@ PYLON_CAM_TYPE detectPylonCamType(const Pylon::CDeviceInfo& device_info)
     {
         device_class = device_info.GetDeviceClass();
 
-        if (device_class == "BaslerGigE")
+        if (device_class == "BaslerCamEmu")
+        {
+            return EMU;
+        }
+        else if (device_class == "BaslerGigE")
         {
             if (device_info.IsModelNameAvailable())
             {
@@ -161,6 +166,8 @@ PylonROS2Camera* createFromDevice(PYLON_CAM_TYPE cam_type, Pylon::IPylonDevice* 
 {
     switch (cam_type)
     {
+        case EMU:
+            return new PylonROS2EmuCamera(device);
         case GIGE:
             return new PylonROS2GigECamera(device);
         case GIGE2 :
