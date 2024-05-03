@@ -247,6 +247,21 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
                 }
             }
 
+            if (!found_desired_device && !device_list.empty())
+            {
+                // Try if an emulated device is available because emulated devices do not support user device id.
+                if (device_list.front().GetDeviceClass() == "BaslerCamEmu")
+                {
+                    RCLCPP_WARN_STREAM(LOGGER, "The specified Device User ID: " << device_user_id_to_open
+                        << " does not match any connected camera device. "
+                        << "However, an emulated camera device was found. "
+                        << "Opening the first available emulated camera device instead.");
+
+                    it = device_list.begin();
+                    found_desired_device = true;
+                }
+            }
+
             if (found_desired_device)
             {
                 RCLCPP_INFO_STREAM(LOGGER, "Found camera device!"
@@ -254,7 +269,15 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
                                             << " with Device User Id: " << device_user_id_to_open);
 
                 PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
-                return createFromDevice(cam_type, tl_factory.CreateDevice(*it));
+                PylonROS2Camera* ros_camera = createFromDevice(cam_type, tl_factory.CreateDevice(*it));
+                if (cam_type == EMU)
+                {
+                    // Implementation note: cannot set the device user id before creating the PylonROS2Camera object otherwise "Device creation failed".
+                    ros_camera->device_user_id_ = device_user_id_to_open;
+                    // Probably without effect.
+                    device_list.begin()->SetUserDefinedName(device_user_id_to_open.c_str());
+                }
+                return ros_camera;
             }
             else
             {
